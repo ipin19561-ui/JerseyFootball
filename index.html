@@ -148,6 +148,10 @@ th{color:var(--mute);font-weight:500}
 .ofm h4{font:400 28px var(--hd);letter-spacing:.04em}
 .ofm small{color:var(--mute);font-size:13px;min-height:18px}
 textarea.in{resize:vertical;min-height:76px}
+.fg[hidden]{display:none}
+.fg input+input{margin-top:0}
+#manBox{gap:8px}
+.lnk{justify-self:start;text-decoration:underline;color:var(--mute);font-size:14px;padding:2px 0;margin-top:-4px}
 .igb{font-size:19px;padding:12px 18px;margin-bottom:22px}
 .locbtn{display:flex;justify-content:space-between;align-items:center;gap:10px;text-align:left;min-height:46px;line-height:1.35}
 .locbtn .ph0{color:var(--mute)}
@@ -299,7 +303,9 @@ textarea.in{resize:vertical;min-height:76px}
    <h4>Data Pesanan</h4>
    <div class="fg"><label for="oNama">Nama lengkap</label><input class="in" id="oNama" autocomplete="name"></div>
    <div class="fg"><label for="oTelp">Nomor telepon / WhatsApp</label><input class="in" id="oTelp" type="tel" inputmode="tel" autocomplete="tel" placeholder="08xxxxxxxxxx"></div>
-   <div class="fg"><span class="fl">Provinsi, Kota, Kecamatan, Kelurahan</span><button type="button" class="in locbtn" id="oLokasi"><span id="locTxt" class="ph0">Pilih lokasi</span><i>›</i></button></div>
+   <div class="fg" id="locFg"><span class="fl">Provinsi, Kota, Kecamatan, Kelurahan</span><button type="button" class="in locbtn" id="oLokasi"><span id="locTxt" class="ph0">Pilih lokasi</span><i>›</i></button></div>
+   <div class="fg" id="manBox" hidden><span class="fl">Isi lokasi manual</span><input class="in" id="mProv" placeholder="Provinsi" autocomplete="address-level1"><input class="in" id="mKab" placeholder="Kota / Kabupaten" autocomplete="address-level2"><input class="in" id="mKec" placeholder="Kecamatan"><input class="in" id="mKel" placeholder="Kelurahan / Desa (opsional)"></div>
+   <button type="button" class="lnk" id="manToggle">Daftar wilayah tidak muncul? Isi manual</button>
    <div class="fg"><label for="oKodePos">Kode pos</label><input class="in" id="oKodePos" inputmode="numeric" maxlength="5" autocomplete="postal-code" placeholder="5 digit, contoh: 15810"></div>
    <div class="fg"><label for="oJalan">Nama jalan, gedung, no. rumah</label><input class="in" id="oJalan" autocomplete="address-line1" placeholder="Contoh: Kp. Binong RT 01/02 No. 5"></div>
    <div class="fg"><label for="oDetail">Detail lainnya (opsional)</label><input class="in" id="oDetail" placeholder="Blok / unit / patokan"></div>
@@ -446,8 +452,24 @@ $('#items').onclick=e=>{
  if(r)cart=cart.filter(x=>x.key!==r.dataset.rm);
  renderCart();
 };
-const WIL='https://emsifa.github.io/api-wilayah-indonesia/api/',WC={};
-async function wget(p){if(WC[p])return WC[p];const r=await fetch(WIL+p+'.json');if(!r.ok)throw 0;return WC[p]=await r.json()}
+/* Sumber data wilayah: dicoba berurutan, otomatis pindah ke cadangan kalau satu gagal.
+   Paling stabil: fork repo emsifa/api-wilayah-indonesia, aktifkan GitHub Pages, lalu taruh alamatmu di urutan pertama. */
+const WILS=['https://emsifa.github.io/api-wilayah-indonesia/api/','https://cdn.jsdelivr.net/gh/emsifa/api-wilayah-indonesia@gh-pages/api/','https://cdn.jsdelivr.net/gh/emsifa/api-wilayah-indonesia@master/static/api/','https://www.emsifa.com/api-wilayah-indonesia/api/'],WC={};
+let wi=0;
+async function wget(p){
+ if(WC[p])return WC[p];
+ for(let k=0;k<WILS.length;k++){
+  const j=(wi+k)%WILS.length;
+  try{
+   const c=new AbortController(),t=setTimeout(()=>c.abort(),8000);
+   const r=await fetch(WILS[j]+p+'.json',{signal:c.signal});clearTimeout(t);
+   if(!r.ok)continue;
+   const d=await r.json();
+   if(Array.isArray(d)&&d.length){wi=j;return WC[p]=d}
+  }catch(e){}
+ }
+ throw 0;
+}
 const tc=t=>t.toLowerCase().replace(/(^|[\s\-\/(])([a-z])/g,(m,a,b)=>a+b.toUpperCase());
 const LVL=['Provinsi','Kota/Kabupaten','Kecamatan','Kelurahan/Desa'];
 let sel=[],lvl=0,pkData=[],place=null;
@@ -456,7 +478,7 @@ function pkSteps(){$('#pkSteps').innerHTML=sel.map((x,i)=>`<button class="pkd" d
 function pkRender(){const q=$('#pkQ').value.toLowerCase().trim(),l=pkData.filter(x=>!q||x.name.toLowerCase().includes(q));$('#pkList').innerHTML=l.length?l.map(x=>`<button class="pki" data-id="${x.id}">${tc(x.name)}</button>`).join(''):'<div class="empty">Tidak ditemukan.</div>'}
 async function pkLoad(){
  $('#pkQ').value='';pkSteps();$('#pkList').innerHTML='<div class="empty">Memuat daftar...</div>';
- try{pkData=await wget(pkPath())}catch(e){$('#pkList').innerHTML='<div class="empty">Data wilayah gagal dimuat. Cek koneksi internet kamu.<br><button class="chip" id="pkRetry" style="margin-top:14px">Coba lagi</button></div>';return}
+ try{pkData=await wget(pkPath())}catch(e){$('#pkList').innerHTML='<div class="empty">Data wilayah gagal dimuat. Cek koneksi internet kamu.<br><button class="chip" id="pkRetry" style="margin-top:14px">Coba lagi</button> <button class="chip" id="pkManual" style="margin-top:14px">Isi manual</button></div>';return}
  pkRender();$('#pkList').scrollTop=0;
 }
 function pkClose(){$('#pk').classList.remove('open')}
@@ -466,6 +488,7 @@ $('#pkQ').oninput=pkRender;
 $('#pkSteps').onclick=e=>{const b=e.target.closest('[data-i]');if(!b)return;const i=+b.dataset.i;sel=sel.slice(0,i);lvl=i;pkLoad()};
 $('#pkList').onclick=e=>{
  if(e.target.id==='pkRetry')return pkLoad();
+ if(e.target.id==='pkManual'){pkClose();setManual(true);return}
  const b=e.target.closest('.pki');if(!b)return;
  const it=pkData.find(x=>x.id===b.dataset.id);sel[lvl]={id:it.id,name:it.name};
  if(lvl<3){lvl++;pkLoad()}else{
@@ -474,6 +497,8 @@ $('#pkList').onclick=e=>{
   $('#ofErr').textContent='';pkClose();
  }
 };
+function setManual(on){$('#manBox').hidden=!on;$('#locFg').hidden=on;$('#manToggle').textContent=on?'Pakai daftar wilayah':'Daftar wilayah tidak muncul? Isi manual';if(on)$('#mProv').focus()}
+$('#manToggle').onclick=()=>setManual($('#manBox').hidden);
 $('#oKodePos').oninput=e=>{e.target.value=e.target.value.replace(/\D/g,'')};
 let pay='';
 const PAYNOTE={'Transfer Bank':'Nomor rekening dikirim admin lewat WhatsApp setelah pesanan masuk.','QRIS':'Kode QRIS dikirim admin lewat WhatsApp setelah pesanan masuk.','E-Wallet':'Nomor e-wallet dikirim admin lewat WhatsApp setelah pesanan masuk.','COD':'Bayar ke kurir saat barang tiba. Ketersediaan COD dikonfirmasi admin.'};
@@ -482,16 +507,17 @@ $('#checkout').onclick=()=>{
  if(!cart.length)return;
  const v=id=>$(id).value.trim(),nm=v('#oNama'),tp=v('#oTelp').replace(/[\s.\-()]/g,''),kp=v('#oKodePos'),jl=v('#oJalan'),dt=v('#oDetail'),ct=v('#oCatatan');
  let el='',msg='';
+ const man=!$('#manBox').hidden,pl=man?{prov:v('#mProv'),kab:v('#mKab'),kec:v('#mKec'),kel:v('#mKel')}:place;
  if(!nm){el='#oNama';msg='Isi nama lengkap dulu.'}
  else if(!/^(\+62|62|0)8\d{7,12}$/.test(tp)){el='#oTelp';msg='Nomor telepon belum valid (contoh: 08123456789).'}
- else if(!place){el='#oLokasi';msg='Pilih provinsi, kota, kecamatan, dan kelurahan dulu.'}
+ else if(!pl||!pl.prov||!pl.kab||!pl.kec){el=man?'#mProv':'#oLokasi';msg=man?'Isi provinsi, kota/kabupaten, dan kecamatan dulu.':'Pilih provinsi, kota, kecamatan, dan kelurahan dulu.'}
  else if(!/^\d{5}$/.test(kp)){el='#oKodePos';msg='Kode pos harus 5 digit angka.'}
  else if(!jl){el='#oJalan';msg='Isi nama jalan, gedung, atau no. rumah.'}
  else if(!pay){el='#payOpts';msg='Pilih metode pembayaran dulu.'}
  if(msg){$('#ofErr').textContent=msg;$(el).scrollIntoView({block:'center'});if($(el).focus&&el!=='#payOpts')$(el).focus();return}
  let t=0,m='Halo JERZI, saya mau pesan:\n\n';
  cart.forEach((c,i)=>{const p=P.find(x=>x.id===c.id),s=p.price*c.qty;t+=s;m+=`${i+1}. ${p.club} ${p.type} ${p.season} (${p.grade})\n   Ukuran ${c.size} x ${c.qty} = ${rp(s)}\n`});
- m+=`\nTotal: ${rp(t)}\n\n*Data Pemesan*\nNama: ${nm}\nNo. Telepon: ${tp}\nAlamat: ${jl}${dt?', '+dt:''}\nKelurahan/Desa: ${tc(place.kel)}\nKecamatan: ${tc(place.kec)}\nKota/Kab: ${tc(place.kab)}\nProvinsi: ${tc(place.prov)}\nKode Pos: ${kp}\n`;
+ m+=`\nTotal: ${rp(t)}\n\n*Data Pemesan*\nNama: ${nm}\nNo. Telepon: ${tp}\nAlamat: ${jl}${dt?', '+dt:''}\n${pl.kel?'Kelurahan/Desa: '+tc(pl.kel)+'\n':''}Kecamatan: ${tc(pl.kec)}\nKota/Kab: ${tc(pl.kab)}\nProvinsi: ${tc(pl.prov)}\nKode Pos: ${kp}\n`;
  if(ct)m+=`Catatan: ${ct}\n`;
  m+=`\n*Metode Pembayaran*: ${pay}\n\nTerima kasih!`;
  window.open(`https://wa.me/${WA}?text=${encodeURIComponent(m)}`,'_blank');

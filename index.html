@@ -141,7 +141,13 @@ th{color:var(--mute);font-weight:500}
 .drawer.open{transform:none}
 .dh{display:flex;justify-content:space-between;align-items:center;padding:12px 8px 12px 18px;border-bottom:1px solid var(--line)}
 .dh h3{font-size:32px}
-.items{flex:1;overflow-y:auto;padding:8px 16px}
+.dbody{flex:1;overflow-y:auto;padding:8px 16px}
+.ofm{display:grid;gap:12px;padding:18px 0 8px}
+.ofm[hidden]{display:none}
+.ofm h4{font:400 28px var(--hd);letter-spacing:.04em}
+.ofm small{color:var(--mute);font-size:13px;min-height:18px}
+textarea.in{resize:vertical;min-height:76px}
+.igb{font-size:19px;padding:12px 18px;margin-bottom:22px}
 .it{display:grid;grid-template-columns:64px 1fr auto;gap:12px;padding:14px 0;border-bottom:1px solid var(--line);align-items:center}
 .it .th{width:64px}
 .it b{display:block;line-height:1.2}
@@ -218,6 +224,7 @@ th{color:var(--mute);font-weight:500}
  <div class="wrap">
   <h2>Katalog Jersey</h2>
   <p class="sub">Cari klub, pilih ukuran, atur budget. Stok ukuran tampil otomatis.</p>
+  <a class="btn ghost igb" href="https://www.instagram.com/jerzi.official/" target="_blank" rel="noopener">Katalog lengkap di Instagram @jerzi.official</a>
   <div class="filters">
    <div class="fg wide"><label for="q">Cari klub atau jersey</label><input class="in" id="q" type="search" placeholder="Contoh: Liverpool, Persija, Away"></div>
    <div class="fg"><label for="fClub">Klub</label><select class="in" id="fClub"></select></div>
@@ -259,8 +266,8 @@ th{color:var(--mute);font-weight:500}
  <div class="wrap">
   <div class="fgrid">
    <div><div class="logo">JER<b>ZI</b></div><p style="margin-top:8px;max-width:30ch">Jersey klub bola untuk suporter Indonesia.</p></div>
-   <div><h4>Kontak</h4><ul><li><a href="https://wa.me/6285703090174">WhatsApp 0857-0309-0174</a></li><li>halo@jerzi.id</li><li>Senin–Sabtu, 09.00–20.00 WIB</li></ul></div>
-   <div><h4>Sosial Media</h4><ul><li><a href="#">Instagram @jerzi.id</a></li><li><a href="#">TikTok @jerzi.id</a></li><li><a href="#">YouTube JERZI</a></li></ul></div>
+   <div><h4>Kontak</h4><ul><li><a href="https://wa.me/6285703090174">WhatsApp 0857-0309-0174</a></li><li>Kp. Binong, Curug, Tangerang</li><li>halo@jerzi.id</li><li>Senin–Sabtu, 09.00–20.00 WIB</li></ul></div>
+   <div><h4>Sosial Media</h4><ul><li><a href="https://www.instagram.com/jerzi.official/" target="_blank" rel="noopener">Instagram @jerzi.official</a></li></ul></div>
    <div><h4>Kebijakan Retur</h4><p>Tukar ukuran gratis maksimal 7 hari setelah barang diterima. Jersey belum dicuci, belum dipakai, label lengkap. Barang cacat produksi bisa diretur dengan video unboxing.</p></div>
   </div>
   <div class="copy">© 2026 JERZI. Semua nama klub dan logo adalah milik pemiliknya masing-masing.</div>
@@ -271,7 +278,19 @@ th{color:var(--mute);font-weight:500}
 <div class="modal" id="modal" role="dialog" aria-modal="true" aria-label="Detail produk"></div>
 <aside class="drawer" id="drawer" aria-label="Keranjang belanja">
  <div class="dh"><h3>Keranjang</h3><button class="ib" id="closeCart" aria-label="Tutup keranjang"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
- <div class="items" id="items"></div>
+ <div class="dbody"><div id="items"></div>
+  <div class="ofm" id="ofm" hidden>
+   <h4>Data Pesanan</h4>
+   <div class="fg"><label for="oNama">Nama lengkap</label><input class="in" id="oNama" autocomplete="name"></div>
+   <div class="fg"><label for="oAlamat">Alamat lengkap</label><textarea class="in" id="oAlamat" rows="3" autocomplete="street-address" placeholder="Jalan, RT/RW, kelurahan, kecamatan, kode pos"></textarea></div>
+   <div class="fg"><label for="oKota">Kota</label><input class="in" id="oKota" autocomplete="address-level2"></div>
+   <div class="fg"><label for="oCatatan">Catatan (opsional)</label><input class="in" id="oCatatan" placeholder="Contoh: kirim sebelum hari Sabtu"></div>
+   <div class="fg"><span class="fl">Metode pembayaran</span>
+    <div class="chips" id="payOpts"><button type="button" class="chip" data-p="Transfer Bank">Transfer Bank</button><button type="button" class="chip" data-p="QRIS">QRIS</button><button type="button" class="chip" data-p="E-Wallet">E-Wallet</button><button type="button" class="chip" data-p="COD">COD</button></div>
+    <small id="payNote"></small></div>
+   <div class="err" id="ofErr"></div>
+  </div>
+ </div>
  <div class="df"><div class="tot"><span>Total</span><b id="total">Rp 0</b></div><button class="btn" id="checkout">Checkout via WhatsApp</button></div>
 </aside>
 <div class="toast" id="toast" role="status"></div>
@@ -393,7 +412,7 @@ function addToCart(p,size,qty){
 function renderCart(){
  const n=cart.reduce((a,c)=>a+c.qty,0);$('#cnt').textContent=n;
  const tot=cart.reduce((a,c)=>a+c.qty*P.find(p=>p.id===c.id).price,0);$('#total').textContent=rp(tot);
- $('#checkout').disabled=!n;$('#checkout').style.opacity=n?1:.4;
+ $('#ofm').hidden=!n;$('#checkout').disabled=!n;$('#checkout').style.opacity=n?1:.4;
  $('#items').innerHTML=n?cart.map(c=>{const p=P.find(x=>x.id===c.id);return `<div class="it"><div class="th">${jersey(p)}</div><div><b>${p.club} ${p.type}</b><small>Ukuran ${c.size} · ${rp(p.price)}</small><div class="qrow" style="margin-top:6px"><div class="qty"><button data-d="-1" data-k="${c.key}" aria-label="Kurangi">−</button><span>${c.qty}</span><button data-d="1" data-k="${c.key}" aria-label="Tambah">+</button></div></div></div><button class="rm" data-rm="${c.key}">Hapus</button></div>`}).join(''):'<div class="empty"><h3 style="font-size:30px">Keranjang kosong</h3><p>Pilih jersey dari katalog untuk mulai belanja.</p></div>';
 }
 $('#items').onclick=e=>{
@@ -402,11 +421,19 @@ $('#items').onclick=e=>{
  if(r)cart=cart.filter(x=>x.key!==r.dataset.rm);
  renderCart();
 };
+let pay='';
+const PAYNOTE={'Transfer Bank':'Nomor rekening dikirim admin lewat WhatsApp setelah pesanan masuk.','QRIS':'Kode QRIS dikirim admin lewat WhatsApp setelah pesanan masuk.','E-Wallet':'Nomor e-wallet dikirim admin lewat WhatsApp setelah pesanan masuk.','COD':'Bayar ke kurir saat barang tiba. Ketersediaan COD dikonfirmasi admin.'};
+$('#payOpts').onclick=e=>{const b=e.target.closest('.chip');if(!b)return;pay=b.dataset.p;document.querySelectorAll('#payOpts .chip').forEach(x=>x.classList.toggle('on',x===b));$('#payNote').textContent=PAYNOTE[pay];$('#ofErr').textContent=''};
 $('#checkout').onclick=()=>{
  if(!cart.length)return;
+ const nm=$('#oNama').value.trim(),ad=$('#oAlamat').value.trim(),kt=$('#oKota').value.trim(),ct=$('#oCatatan').value.trim();
+ const miss=!nm?'#oNama':!ad?'#oAlamat':!kt?'#oKota':'';
+ if(miss||!pay){$('#ofErr').textContent=miss?'Lengkapi nama, alamat, dan kota dulu.':'Pilih metode pembayaran dulu.';const el=miss?$(miss):$('#payOpts');el.scrollIntoView({block:'center'});if(miss)el.focus();return}
  let t=0,m='Halo JERZI, saya mau pesan:\n\n';
  cart.forEach((c,i)=>{const p=P.find(x=>x.id===c.id),s=p.price*c.qty;t+=s;m+=`${i+1}. ${p.club} ${p.type} ${p.season} (${p.grade})\n   Ukuran ${c.size} x ${c.qty} = ${rp(s)}\n`});
- m+=`\nTotal: ${rp(t)}\n\nNama:\nAlamat lengkap:\nKota/Kode pos:\n\nTerima kasih!`;
+ m+=`\nTotal: ${rp(t)}\n\n*Data Pemesan*\nNama: ${nm}\nAlamat: ${ad}\nKota: ${kt}\n`;
+ if(ct)m+=`Catatan: ${ct}\n`;
+ m+=`\n*Metode Pembayaran*: ${pay}\n\nTerima kasih!`;
  window.open(`https://wa.me/${WA}?text=${encodeURIComponent(m)}`,'_blank');
 };
 $('#cartBtn').onclick=()=>show('#drawer');
